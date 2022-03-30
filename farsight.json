@@ -1,0 +1,139 @@
+{
+  "iff": {
+//    "logfile": "iff.log",
+    "log_level": "WARNING",
+
+//    "service_threads": 0,
+    "optimistic_alloc": false,
+    "fallback_to_dynamic": true,
+
+    "devices": [
+      {
+        "id": "cpu_dev",
+        "type": "cpu"
+      },
+      {
+        "id": "cuda_dev",
+        "type": "cuda",
+        "device_number": 0
+      }
+    ],
+
+    "services": {
+      "rtsp_server": {
+        "host": "192.168.0.180",
+        "port": 8554,
+        "MTU": 1500,
+        "listen_depth": 9
+      }
+    }
+  },
+
+  "chains": [
+    {
+      "id": "main_chain",
+
+      "elements": [
+        {
+          "id": "cam",
+          "type": "xicamera",
+          "debug_level": "WARNING",
+          "auto_bandwidth_calculation": false,
+          "cpu_device_id": "cpu_dev",
+          "serial_number": "36382351",
+//          "license_file": "36382351.enc",
+          "buffer_mode": "safe",
+          "custom_params": [
+            { "buffers_queue_size": 4 },
+            { "acq_buffer_size": 4194304 },
+            { "acq_buffer_size_unit": 20 },
+            { "bpc": 1 },
+            { "limit_bandwidth": 3000 },
+            { "limit_bandwidth_mode": 1 }
+          ],
+          "exposure": 10,
+          "fps": 30.0,
+          "gain": 0.0,
+          "image_format": "RAW8"
+        },
+        {
+          "id": "raw_writer",
+          "type": "dng_writer",
+          "cpu_device_id": "cpu_dev",
+          "base_directory": "recorded",
+          "max_processing_count": 10,
+          "io_timer_interval": 100,
+          "filename_template": "{format}@{width}x{height}-{utc_time}.dng"
+        },
+        {
+          "id": "gpuproc",
+          "type": "cuda_processor",
+          "max_processing_count": 2,
+          "cpu_device_id": "cpu_dev",
+          "gpu_device_id": "cuda_dev",
+          "elements": [
+            {"id": "import_from_host", "type": "import_from_host"},
+            {"id": "black_level", "type": "black_level"},
+            {"id": "white_balance", "type": "white_balance"},
+            {"id": "demosaic", "type": "demosaic", "algorithm": "HQLI"},
+            {"id": "color_correction", "type": "color_correction", "matrix": [1.0, 0.0, 0.0,
+                                                                              0.0, 1.0, 0.0,
+                                                                              0.0, 0.0, 1.0]},
+            {"id": "gamma", "type": "gamma8", "linear": 0.018, "power": 0.45},
+            {"id": "export_to_device", "type": "export_to_device", "output_format": "NV12_BT709", "output_name": "yv12"},
+            {"id": "hist", "type": "histogram", "output_format": "Histogram4Bayer256Int", "output_name": "histogram"}
+          ],
+          "connections": [
+            { "src": "import_from_host", "dst": "black_level" },
+            { "src": "black_level", "dst": "white_balance" },
+            { "src": "white_balance", "dst": "demosaic" },
+            { "src": "demosaic", "dst": "color_correction" },
+            { "src": "color_correction", "dst": "gamma" },
+            { "src": "gamma", "dst": "export_to_device" },
+            { "src": "black_level", "dst": "hist" }
+          ]
+        },
+        {
+          "id": "autoctrl",
+          "type": "awb_aec",
+          "cpu_device_id": "cpu_dev",
+          "autostart": true,
+          "aec_enabled": false,
+          "awb_enabled": true,
+          "max_exposure": 30000
+        },
+        {
+          "id": "nvenc",
+          "type": "encoder",
+          "encoder_type": "nvidia",
+          "cpu_device_id": "cpu_dev",
+          "gpu_device_id": "cuda_dev",
+          "max_processing_count": 4,
+          "codec": "H265",
+          "bitrate": 30000000,
+          "fps": 30.0,
+          "rc_mode": "CBR",
+          "config_preset": "HP",
+          "max_performance": true
+        },
+        {
+          "id": "netstream",
+          "type": "rtsp_stream",
+          "relative_uri": "/cam",
+          "name": "videostream"
+        }
+      ],
+      "connections": [
+        { "src": "cam", "dst": "raw_writer"},
+        { "src": "cam", "dst": "gpuproc" },
+        { "src": "gpuproc->histogram","dst": "autoctrl", "type": "weak" },
+        { "src": "gpuproc->yv12", "dst": "nvenc" },
+        { "src": "nvenc", "dst": "netstream" }
+      ],
+      "parametercontrol": [
+        { "origin": "autoctrl/wb_callback", "target": "cam" },
+        { "origin": "autoctrl/exposure_callback", "target": "cam" }
+      ]
+    }
+  ]
+}
