@@ -16,3 +16,4 @@ It comes with example configuration file (`farsight.json`) demonstrating the fol
 * automatic control of exposure time and white balance
 * H.265 encoding
 * RTSP streaming
+* HTTP control interface

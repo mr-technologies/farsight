@@ -1,11 +1,14 @@
 {
-  "iff": {
+  "IFF": {
 //    "logfile": "iff.log",
     "log_level": "WARNING",
 
 //    "service_threads": 0,
     "optimistic_alloc": false,
     "fallback_to_dynamic": true,
+
+    "enable_control_interface": true,
+    "control_interface_base_url": "/chains",
 
     "devices": [
       {
@@ -23,7 +26,12 @@
       "rtsp_server": {
         "host": "192.168.0.180",
         "port": 8554,
-        "MTU": 1500,
+        "mtu": 1500,
+        "listen_depth": 9
+      },
+      "http_server": {
+        "host": "192.168.0.180",
+        "port": 8080,
         "listen_depth": 9
       }
     }
@@ -31,7 +39,7 @@
 
   "chains": [
     {
-      "id": "main_chain",
+      "id": "mc124",
 
       "elements": [
         {
@@ -40,18 +48,23 @@
           "debug_level": "WARNING",
           "auto_bandwidth_calculation": false,
           "cpu_device_id": "cpu_dev",
-          "serial_number": "36382351",
-//          "license_file": "36382351.enc",
+          "serial_number": "CUCAC1644001",
           "buffer_mode": "safe",
           "custom_params": [
-            { "buffers_queue_size": 4 },
-            { "acq_buffer_size": 4194304 },
-            { "acq_buffer_size_unit": 20 },
+            { "acq_buffer_size": 8294400 },
+            { "acq_buffer_size_unit": 8 },
+            { "buffers_queue_size": 6 },
             { "bpc": 1 },
             { "limit_bandwidth": 3000 },
             { "limit_bandwidth_mode": 1 }
           ],
-          "exposure": 10,
+          "roi_region": {
+            "offset_x": 136,
+            "width": 3840,
+            "offset_y": 424,
+            "height": 2160
+          },
+          "exposure": 10000,
           "fps": 30.0,
           "gain": 0.0,
           "image_format": "RAW8"
@@ -61,7 +74,7 @@
           "type": "dng_writer",
           "cpu_device_id": "cpu_dev",
           "base_directory": "recorded",
-          "max_processing_count": 10,
+          "max_processing_count": 50,
           "io_timer_interval": 100,
           "filename_template": "{format}@{width}x{height}-{utc_time}.dng"
         },
@@ -80,7 +93,7 @@
                                                                               0.0, 1.0, 0.0,
                                                                               0.0, 0.0, 1.0]},
             {"id": "gamma", "type": "gamma8", "linear": 0.018, "power": 0.45},
-            {"id": "export_to_device", "type": "export_to_device", "output_format": "NV12_BT709", "output_name": "yv12"},
+            {"id": "export_to_device", "type": "export_to_device", "output_format": "NV12_BT709", "output_name": "enc_out"},
             {"id": "hist", "type": "histogram", "output_format": "Histogram4Bayer256Int", "output_name": "histogram"}
           ],
           "connections": [
@@ -127,7 +140,7 @@
         { "src": "cam", "dst": "raw_writer"},
         { "src": "cam", "dst": "gpuproc" },
         { "src": "gpuproc->histogram","dst": "autoctrl", "type": "weak" },
-        { "src": "gpuproc->yv12", "dst": "nvenc" },
+        { "src": "gpuproc->enc_out", "dst": "nvenc" },
         { "src": "nvenc", "dst": "netstream" }
       ],
       "parametercontrol": [

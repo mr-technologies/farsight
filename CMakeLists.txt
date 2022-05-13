@@ -10,7 +10,7 @@ if(is_subdirectory) # ================= Build as IFF subdirectory ==============
             )
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
-            iff_sdk
+            iffsdk
             nlohmann_json::nlohmann_json
             )
 
@@ -25,7 +25,7 @@ if(is_subdirectory) # ================= Build as IFF subdirectory ==============
                 )
     endif()
 
-    target_include_directories(${PROJECT_NAME} PRIVATE $<TARGET_PROPERTY:iff_sdk,INTERFACE_INCLUDE_DIRECTORIES>)
+    target_include_directories(${PROJECT_NAME} PRIVATE $<TARGET_PROPERTY:iffsdk,INTERFACE_INCLUDE_DIRECTORIES>)
 
     configure_file(${PROJECT_NAME}.json ${CMAKE_BINARY_DIR}/bin/${PROJECT_NAME}.json COPYONLY)
     add_custom_command(
@@ -85,18 +85,18 @@ else() # ================= Stand-alone build =================
 
     if(MSVC)
         target_link_libraries(${PROJECT_NAME} PRIVATE
-                ${SDK_LIBRARY_DIR}/iff_sdk.lib
+                ${SDK_LIBRARY_DIR}/iffsdk.lib
                 )
     elseif(APPLE)
         target_link_libraries(${PROJECT_NAME} PRIVATE
                 ${CMAKE_DL_LIBS}
-                ${SDK_LIBRARY_DIR}/libiff_sdk.dylib
+                ${SDK_LIBRARY_DIR}/libiffsdk.dylib
                 )
     elseif(UNIX)
         target_link_libraries(${PROJECT_NAME} PRIVATE
                 rt
                 ${CMAKE_DL_LIBS}
-                ${SDK_LIBRARY_DIR}/libiff_sdk.so
+                ${SDK_LIBRARY_DIR}/libiffsdk.so
                 )
     endif()
 
@@ -107,7 +107,7 @@ else() # ================= Stand-alone build =================
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                 DEPENDS ${CMAKE_BINARY_DIR}/bin/${PROJECT_NAME}.json
                 COMMAND ${CMAKE_COMMAND} -E copy
-                iff_sdk.dll
+                iffsdk.dll
                 cuda_device.dll
                 cpu_device.dll
                 nvidia_encoder.dll
