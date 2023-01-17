@@ -2,6 +2,7 @@
 #include <stack>
 #include <vector>
 #include <fstream>
+#include <sstream>
 
 // json
 #include <nlohmann/json.hpp>
@@ -27,13 +28,13 @@ int main()
         printf("Invalid configuration provided: section 'chains' must be an array\n");
         return 1;
     }
-
     auto it_iff = config.find("IFF");
     if(it_iff == config.end())
     {
         printf("Unable to find IFF configuration section in config file\n");
         return 1;
     }
+
     iff_initialize(it_iff.value().dump().c_str());
 
     std::vector<iff_chain_handle_t> chains;
@@ -41,17 +42,21 @@ int main()
     {
         auto chain_handle = iff_create_chain(chain_config.dump().c_str(), [](const char* element_name, int error_code)
         {
-            printf("Chain element %s reported an error: %d\n", element_name, error_code);
+            std::ostringstream message;
+            message << "Chain element " << element_name << " reported an error: " << error_code;
+            iff_log(IFF_LOG_LEVEL_ERROR, message.str().c_str());
         });
         chains.push_back(chain_handle);
     }
 
-    auto current_chain = chains[0];
-
-    printf("Press Esc key to terminate program\n");
+    iff_log(IFF_LOG_LEVEL_INFO, "Press Esc key to terminate program");
     getchar();
 
-    iff_release_chain(current_chain);
+    for(auto chain : chains)
+    {
+        iff_release_chain(chain);
+    }
+
     iff_finalize();
 
     return 0;
