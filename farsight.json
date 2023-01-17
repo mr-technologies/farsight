@@ -65,7 +65,7 @@
             "height": 2160
           },
           "exposure": 10000,
-          "fps": 30.0,
+          "fps": 44.0,
           "gain": 0.0,
           "image_format": "RAW8"
         },
@@ -81,7 +81,7 @@
         {
           "id": "gpuproc",
           "type": "cuda_processor",
-          "max_processing_count": 2,
+          "max_processing_count": 4,
           "cpu_device_id": "cpu_dev",
           "gpu_device_id": "cuda_dev",
           "elements": [
@@ -124,10 +124,14 @@
           "max_processing_count": 4,
           "codec": "H265",
           "bitrate": 30000000,
-          "fps": 30.0,
+          "fps": 44.0,
           "rc_mode": "CBR",
           "config_preset": "HP",
           "max_performance": true
+        },
+        {
+          "id": "sub_mon",
+          "type": "sub_monitor"
         },
         {
           "id": "netstream",
@@ -141,11 +145,15 @@
         { "src": "cam", "dst": "gpuproc" },
         { "src": "gpuproc->histogram","dst": "autoctrl", "type": "weak" },
         { "src": "gpuproc->enc_out", "dst": "nvenc" },
-        { "src": "nvenc", "dst": "netstream" }
+        { "src": "nvenc", "dst": "sub_mon" },
+        { "src": "sub_mon", "dst": "netstream" }
       ],
       "parametercontrol": [
         { "origin": "autoctrl/wb_callback", "target": "cam" },
         { "origin": "autoctrl/exposure_callback", "target": "cam" }
+      ],
+      "commandcalls": [
+        { "origin": "sub_mon/on_new_consumer", "target": "nvenc", "execute": {"command": "force_idr"} }
       ]
     }
   ]
