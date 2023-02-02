@@ -1,63 +1,67 @@
 // std
-#include <stack>
-#include <vector>
+#include <cstdio>
 #include <fstream>
+#include <iostream>
+#include <iterator>
 #include <sstream>
+#include <stdlib.h>
+#include <string>
+#include <vector>
 
 // json
 #include <nlohmann/json.hpp>
-using json = nlohmann::json;
 
 // IFF SDK
-#include "iff.h"
+#include <iff.h>
+
 
 int main()
 {
     std::ifstream cfg_file("farsight.json");
-    std::string config_str = { std::istreambuf_iterator<char>(cfg_file), std::istreambuf_iterator<char>() };
+    const std::string config_str = { std::istreambuf_iterator<char>(cfg_file), std::istreambuf_iterator<char>() };
 
-    auto config = json::parse(config_str, nullptr, true, true);
-    auto it_chains = config.find("chains");
+    const auto config = nlohmann::json::parse(config_str, nullptr, true, true);
+    const auto it_chains = config.find("chains");
     if(it_chains == config.end())
     {
-        printf("Invalid configuration provided: chains not found\n");
-        return 1;
+        std::cerr << "Invalid configuration provided: missing `chains` section\n";
+        return EXIT_FAILURE;
     }
     if(!it_chains->is_array())
     {
-        printf("Invalid configuration provided: section 'chains' must be an array\n");
-        return 1;
+        std::cerr << "Invalid configuration provided: section `chains` must be an array\n";
+        return EXIT_FAILURE;
     }
-    auto it_iff = config.find("IFF");
+    const auto it_iff = config.find("IFF");
     if(it_iff == config.end())
     {
-        printf("Unable to find IFF configuration section in config file\n");
-        return 1;
+        std::cerr << "Invalid configuration provided: missing `IFF` section\n";
+        return EXIT_FAILURE;
     }
 
     iff_initialize(it_iff.value().dump().c_str());
 
-    std::vector<iff_chain_handle_t> chains;
-    for(json& chain_config : it_chains.value())
+    std::vector<iff_chain_handle_t> chain_handles;
+    for(const auto& chain_config : it_chains.value())
     {
-        auto chain_handle = iff_create_chain(chain_config.dump().c_str(), [](const char* element_name, int error_code)
-        {
-            std::ostringstream message;
-            message << "Chain element " << element_name << " reported an error: " << error_code;
-            iff_log(IFF_LOG_LEVEL_ERROR, message.str().c_str());
-        });
-        chains.push_back(chain_handle);
+        const auto chain_handle = iff_create_chain(chain_config.dump().c_str(), [](const char* element_name, int error_code)
+                {
+                    std::ostringstream message;
+                    message << "Chain element `" << element_name << "` reported an error: " << error_code;
+                    iff_log(IFF_LOG_LEVEL_ERROR, message.str().c_str());
+                });
+        chain_handles.push_back(chain_handle);
     }
 
-    iff_log(IFF_LOG_LEVEL_INFO, "Press Esc key to terminate program");
-    getchar();
+    iff_log(IFF_LOG_LEVEL_INFO, "Press Enter to terminate the program");
+    std::getchar();
 
-    for(auto chain : chains)
+    for(const auto chain_handle : chain_handles)
     {
-        iff_release_chain(chain);
+        iff_release_chain(chain_handle);
     }
 
     iff_finalize();
 
-    return 0;
+    return EXIT_SUCCESS;
 }
