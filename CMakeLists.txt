@@ -1,122 +1,80 @@
+cmake_minimum_required(VERSION 3.10)
 project(farsight LANGUAGES CXX)
 
-get_directory_property(is_subdirectory PARENT_DIRECTORY)
+get_cmake_property(build_type_ignored GENERATOR_IS_MULTI_CONFIG)
+if(NOT CMAKE_BUILD_TYPE AND NOT build_type_ignored)
+    set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+    message(STATUS "Defaulting to ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE")
+endif()
 
-if(is_subdirectory) # ================= Build as IFF subdirectory =================
-    message(STATUS "Building SDK sample within IFF build")
+add_executable(${PROJECT_NAME}
+        farsight.cpp
+        )
 
-    add_executable(${PROJECT_NAME}
-            farsight.cpp
+set_target_properties(${PROJECT_NAME} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        BUILD_WITH_INSTALL_RPATH TRUE
+        )
+if(APPLE)
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+            INSTALL_RPATH "@loader_path"
             )
-
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-            iffsdk
-            nlohmann_json::nlohmann_json
+elseif(UNIX)
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+            INSTALL_RPATH "$ORIGIN"
             )
+endif()
 
-    if(APPLE)
-        target_link_libraries(${PROJECT_NAME} PRIVATE
-                ${CMAKE_DL_LIBS}
-                )
-    elseif(UNIX)
-        target_link_libraries(${PROJECT_NAME} PRIVATE
-                rt
-                ${CMAKE_DL_LIBS}
-                )
-    endif()
-
-    target_include_directories(${PROJECT_NAME} PRIVATE $<TARGET_PROPERTY:iffsdk,INTERFACE_INCLUDE_DIRECTORIES>)
-
-    configure_file(${PROJECT_NAME}.json ${CMAKE_BINARY_DIR}/bin/${PROJECT_NAME}.json COPYONLY)
-    add_custom_command(
-            TARGET ${PROJECT_NAME} POST_BUILD
-            DEPENDS ${CMAKE_BINARY_DIR}/bin/${PROJECT_NAME}.json
-            )
-
-else() # ================= Stand-alone build =================
-    message(STATUS "Building SDK sample stand-alone")
-    # settings for stand-alone build
-
-    if(NOT CMAKE_BUILD_TYPE)
-        # Visual Studio sets CMAKE_CONFIGURATION_TYPES to currently chosen config
-        # For command line builds config should be specified in the cmake options
-        # Debug is default on all platforms
-        if(CMAKE_CONFIGURATION_TYPES)
-            list(GET CMAKE_CONFIGURATION_TYPES 0 CMAKE_BUILD_TYPE)
-        else()
-            set(CMAKE_BUILD_TYPE "Debug")
+file(GENERATE OUTPUT CopyConfig-$<CONFIG>.cmake CONTENT "
+        if(NOT EXISTS $<TARGET_FILE_DIR:${PROJECT_NAME}>/${PROJECT_NAME}.json)
+            file(INSTALL
+                    ${PROJECT_NAME}.json
+                    DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>
+                    )
         endif()
-    endif()
-    message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+        ")
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/CopyConfig-$<CONFIG>.cmake
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        VERBATIM
+        )
 
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/)
-
-    set(CMAKE_CXX_STANDARD 17)
-    set(CMAKE_CXX_EXTENSIONS OFF)
-    set(CMAKE_CXX_STANDARD_REQUIRED ON)
-    if(APPLE)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated")
-    elseif(UNIX)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -fvisibility-inlines-hidden")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-O1 -Wl,--as-needed -Wl,--compress-debug-sections=zlib")
-        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-O1 -Wl,--as-needed -Wl,--no-undefined -Wl,--compress-debug-sections=zlib")
-        # Link libstdc++ statically for better compatibility
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
-        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libstdc++ -Wl,-Bsymbolic -Wl,--exclude-libs=ALL")
-    elseif(MSVC)
-        # Defines for windows includes (0x0601 == _WIN32_WINNT_WIN7)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_WIN32_WINNT=0x0601 /DWINVER=0x0601 /DWIN32_LEAN_AND_MEAN /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS")
-        # Parallel build
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
-        # Silence C++17 deprecation warnings
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS")
-        # Silence experimental/filesystem deprecation error with MSVC 2019
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING")
-    endif()
-
-    set(SDK_LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../sdk/lib)
-    set(SDK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../sdk/include)
-    set(SAMPLES_COMMON_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../common)
-
-    add_executable(${PROJECT_NAME}
-            farsight.cpp
+if(NOT TARGET IFF::iffsdk)
+    add_library(IFF::iffsdk INTERFACE IMPORTED)
+    set_property(TARGET IFF::iffsdk PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../sdk/include
             )
-
     if(MSVC)
-        target_link_libraries(${PROJECT_NAME} PRIVATE
-                ${SDK_LIBRARY_DIR}/iffsdk.lib
-                )
-    elseif(APPLE)
-        target_link_libraries(${PROJECT_NAME} PRIVATE
-                ${CMAKE_DL_LIBS}
-                ${SDK_LIBRARY_DIR}/libiffsdk.dylib
-                )
-    elseif(UNIX)
-        target_link_libraries(${PROJECT_NAME} PRIVATE
-                rt
-                ${CMAKE_DL_LIBS}
-                ${SDK_LIBRARY_DIR}/libiffsdk.so
-                )
-    endif()
-
-    target_include_directories(${PROJECT_NAME} PRIVATE ${SDK_INCLUDE_DIR} ${SAMPLES_COMMON_DIRECTORY})
-
-    configure_file(${PROJECT_NAME}.json ${CMAKE_BINARY_DIR}/bin/${PROJECT_NAME}.json COPYONLY)
-    if(MSVC)
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                DEPENDS ${CMAKE_BINARY_DIR}/bin/${PROJECT_NAME}.json
-                COMMAND ${CMAKE_COMMAND} -E copy
-                iffsdk.dll
-                cuda_device.dll
-                cpu_device.dll
-                nvidia_encoder.dll
-                ${CMAKE_BINARY_DIR}/bin/
-                WORKING_DIRECTORY ${SDK_LIBRARY_DIR}/
+        set_property(TARGET IFF::iffsdk PROPERTY INTERFACE_LINK_LIBRARIES
+                ${CMAKE_CURRENT_SOURCE_DIR}/../../sdk/lib/iffsdk${CMAKE_LINK_LIBRARY_SUFFIX}
                 )
     else()
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                DEPENDS ${CMAKE_BINARY_DIR}/bin/${PROJECT_NAME}.json
+        set_property(TARGET IFF::iffsdk PROPERTY INTERFACE_LINK_LIBRARIES
+                ${CMAKE_CURRENT_SOURCE_DIR}/../../sdk/lib/${CMAKE_SHARED_LIBRARY_PREFIX}iffsdk${CMAKE_SHARED_LIBRARY_SUFFIX}
                 )
     endif()
+    file(GENERATE OUTPUT CopySDK-$<CONFIG>.cmake CONTENT "
+            file(INSTALL
+                    ../../sdk/lib/
+                    DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>
+                    FILES_MATCHING PATTERN \"${CMAKE_SHARED_LIBRARY_PREFIX}*${CMAKE_SHARED_LIBRARY_SUFFIX}\"
+                    )
+            ")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/CopySDK-$<CONFIG>.cmake
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            VERBATIM
+            )
 endif()
+
+if(NOT TARGET nlohmann_json::nlohmann_json)
+    add_library(nlohmann_json::nlohmann_json INTERFACE IMPORTED)
+    set_property(TARGET nlohmann_json::nlohmann_json PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+            ${CMAKE_CURRENT_SOURCE_DIR}/../common
+            )
+endif()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+        IFF::iffsdk
+        nlohmann_json::nlohmann_json
+        )
