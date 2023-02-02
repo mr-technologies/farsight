@@ -8,7 +8,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT build_type_ignored)
 endif()
 
 add_executable(${PROJECT_NAME}
-        farsight.cpp
+        ${PROJECT_NAME}.cpp
         )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
