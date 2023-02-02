@@ -1,14 +1,6 @@
 {
   "IFF": {
-//    "logfile": "iff.log",
-    "log_level": "WARNING",
-
-//    "service_threads": 0,
-    "optimistic_alloc": false,
-    "fallback_to_dynamic": true,
-
     "enable_control_interface": true,
-    "control_interface_base_url": "/chains",
 
     "devices": [
       {
@@ -17,93 +9,75 @@
       },
       {
         "id": "cuda_dev",
-        "type": "cuda",
-        "device_number": 0
+        "type": "cuda"
       }
     ],
 
     "services": {
       "rtsp_server": {
-        "host": "192.168.0.180",
+        "host": "<CHANGEME>",
         "port": 8554,
-        "mtu": 1500,
-        "listen_depth": 9
+        "mtu": 1500
       },
       "http_server": {
-        "host": "192.168.0.180",
-        "port": 8080,
-        "listen_depth": 9
+        "port": 8080
       }
     }
   },
 
   "chains": [
     {
-      "id": "mc124",
+      "id": "main",
 
       "elements": [
         {
           "id": "cam",
           "type": "xicamera",
-          "debug_level": "WARNING",
-          "auto_bandwidth_calculation": false,
           "cpu_device_id": "cpu_dev",
-          "serial_number": "CUCAC1644001",
-          "buffer_mode": "safe",
+          "serial_number": "<CHANGEME>",
+          "image_format": "RAW8",
           "custom_params": [
-            { "acq_buffer_size": 8294400 },
-            { "acq_buffer_size_unit": 8 },
-            { "buffers_queue_size": 6 },
-            { "bpc": 1 },
-            { "limit_bandwidth": 3000 },
-            { "limit_bandwidth_mode": 1 }
+            { "bpc":                            1 },
+            { "column_fpn_correction":          1 },
+            { "row_fpn_correction":             1 },
+            { "column_black_offset_correction": 1 },
+            { "row_black_offset_correction":    1 }
           ],
-          "roi_region": {
-            "offset_x": 136,
-            "width": 3840,
-            "offset_y": 424,
-            "height": 2160
-          },
           "exposure": 10000,
-          "fps": 44.0,
-          "gain": 0.0,
-          "image_format": "RAW8"
+          "fps": 30.0,
+          "gain": 0.0
         },
         {
-          "id": "raw_writer",
+          "id": "writer",
           "type": "dng_writer",
           "cpu_device_id": "cpu_dev",
-          "base_directory": "recorded",
-          "max_processing_count": 50,
-          "io_timer_interval": 100,
-          "filename_template": "{format}@{width}x{height}-{utc_time}.dng"
+          "filename_template": "{utc_time}.dng"
         },
         {
           "id": "gpuproc",
           "type": "cuda_processor",
-          "max_processing_count": 4,
           "cpu_device_id": "cpu_dev",
           "gpu_device_id": "cuda_dev",
           "elements": [
-            {"id": "import_from_host", "type": "import_from_host"},
-            {"id": "black_level", "type": "black_level"},
-            {"id": "white_balance", "type": "white_balance"},
-            {"id": "demosaic", "type": "demosaic", "algorithm": "HQLI"},
-            {"id": "color_correction", "type": "color_correction", "matrix": [1.0, 0.0, 0.0,
-                                                                              0.0, 1.0, 0.0,
-                                                                              0.0, 0.0, 1.0]},
-            {"id": "gamma", "type": "gamma8", "linear": 0.018, "power": 0.45},
-            {"id": "export_to_device", "type": "export_to_device", "output_format": "NV12_BT709", "output_name": "enc_out"},
-            {"id": "hist", "type": "histogram", "output_format": "Histogram4Bayer256Int", "output_name": "histogram"}
+            { "id": "import_from_host", "type": "import_from_host" },
+            { "id": "black_level",      "type": "black_level" },
+            { "id": "white_balance",    "type": "white_balance" },
+            { "id": "demosaic",         "type": "demosaic",         "algorithm": "HQLI" },
+            { "id": "color_correction", "type": "color_correction", "matrix": [ 1.0, 0.0, 0.0,
+                                                                                0.0, 1.0, 0.0,
+                                                                                0.0, 0.0, 1.0 ] },
+            { "id": "gamma",            "type": "gamma8",           "linear": 0.018, "power": 0.45 },
+            { "id": "export_to_device", "type": "export_to_device", "output_format": "NV12_BT709",            "output_name": "yuv" },
+            { "id": "hist",             "type": "histogram",        "output_format": "Histogram4Bayer256Int", "output_name": "histogram" }
           ],
           "connections": [
             { "src": "import_from_host", "dst": "black_level" },
-            { "src": "black_level", "dst": "white_balance" },
-            { "src": "white_balance", "dst": "demosaic" },
-            { "src": "demosaic", "dst": "color_correction" },
+            { "src": "black_level",      "dst": "white_balance" },
+            { "src": "white_balance",    "dst": "demosaic" },
+            { "src": "demosaic",         "dst": "color_correction" },
             { "src": "color_correction", "dst": "gamma" },
-            { "src": "gamma", "dst": "export_to_device" },
-            { "src": "black_level", "dst": "hist" }
+            { "src": "gamma",            "dst": "export_to_device" },
+            { "src": "black_level",      "dst": "hist" }
           ]
         },
         {
@@ -111,9 +85,9 @@
           "type": "awb_aec",
           "cpu_device_id": "cpu_dev",
           "autostart": true,
-          "aec_enabled": false,
+          "aec_enabled": true,
           "awb_enabled": true,
-          "max_exposure": 30000
+          "max_exposure": 33000
         },
         {
           "id": "nvenc",
@@ -121,39 +95,36 @@
           "encoder_type": "nvidia",
           "cpu_device_id": "cpu_dev",
           "gpu_device_id": "cuda_dev",
-          "max_processing_count": 4,
-          "codec": "H265",
-          "bitrate": 30000000,
-          "fps": 44.0,
-          "rc_mode": "CBR",
-          "config_preset": "HP",
+          "max_processing_count": 3,
+          "codec": "H264",
+          "bitrate": 10000000,
+          "fps": 30.0,
           "max_performance": true
         },
         {
-          "id": "sub_mon",
+          "id": "mon",
           "type": "sub_monitor"
         },
         {
           "id": "netstream",
           "type": "rtsp_stream",
-          "relative_uri": "/cam",
-          "name": "videostream"
+          "relative_uri": "/cam"
         }
       ],
       "connections": [
-        { "src": "cam", "dst": "raw_writer"},
-        { "src": "cam", "dst": "gpuproc" },
-        { "src": "gpuproc->histogram","dst": "autoctrl", "type": "weak" },
-        { "src": "gpuproc->enc_out", "dst": "nvenc" },
-        { "src": "nvenc", "dst": "sub_mon" },
-        { "src": "sub_mon", "dst": "netstream" }
+        { "src": "cam",                           "dst": "writer" },
+        { "src": "cam",                           "dst": "gpuproc" },
+        { "src": "gpuproc->histogram",            "dst": "autoctrl", "type": "weak" },
+        { "src": "gpuproc->yuv",                  "dst": "nvenc" },
+        { "src": "nvenc",                         "dst": "mon" },
+        { "src": "mon",                           "dst": "netstream" }
       ],
       "parametercontrol": [
-        { "origin": "autoctrl/wb_callback", "target": "cam" },
+        { "origin": "autoctrl/wb_callback",       "target": "cam" },
         { "origin": "autoctrl/exposure_callback", "target": "cam" }
       ],
       "commandcalls": [
-        { "origin": "sub_mon/on_new_consumer", "target": "nvenc", "execute": {"command": "force_idr"} }
+        { "origin": "mon/on_new_consumer",        "target": "nvenc", "execute": { "command": "force_idr" } }
       ]
     }
   ]
