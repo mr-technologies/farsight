@@ -67,7 +67,8 @@
                                                                                 0.0, 1.0, 0.0,
                                                                                 0.0, 0.0, 1.0 ] },
             { "id": "gamma",            "type": "gamma8",           "linear": 0.018, "power": 0.45 },
-            { "id": "export_to_device", "type": "export_to_device", "output_format": "NV12_BT709",            "output_name": "yuv" },
+            { "id": "export_to_device", "type": "export_to_device", "output_format": "NV12_BT709", //change "NV12_BT709" to "YV12_BT709" on Jetson
+                                                                                                              "output_name": "yuv" },
             { "id": "hist",             "type": "histogram",        "output_format": "Histogram4Bayer256Int", "output_name": "histogram" }
           ],
           "connections": [
