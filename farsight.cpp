@@ -58,13 +58,13 @@ int main()
                                                    {
                                                         std::ostringstream message;
                                                         message << "Chain element `" << element_name << "` reported an error: " << error_code;
-                                                        iff_log(IFF_LOG_LEVEL_ERROR, message.str().c_str());
+                                                        iff_log(IFF_LOG_LEVEL_ERROR, "farsight", message.str().c_str());
                                                    },
                                                    nullptr);
         chain_handles.push_back(chain_handle);
     }
 
-    iff_log(IFF_LOG_LEVEL_INFO, "Press Enter to terminate the program");
+    iff_log(IFF_LOG_LEVEL_INFO, "farsight", "Press Enter to terminate the program");
     std::getchar();
 
     for(const auto chain_handle : chain_handles)
