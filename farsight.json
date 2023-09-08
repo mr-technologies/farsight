@@ -98,6 +98,7 @@
           "gpu_device_id": "cuda_dev",
           "max_processing_count": 3,
           "codec": "H264",
+          "profile": "H264_BASELINE",
           "bitrate": 10000000,
           "fps": 30.0,
           "max_performance": true
