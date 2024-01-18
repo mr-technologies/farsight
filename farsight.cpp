@@ -2,10 +2,8 @@
 #include <cstdio>
 #include <fstream>
 #include <iostream>
-#include <iterator>
 #include <sstream>
 #include <stdlib.h>
-#include <string>
 #include <vector>
 
 // json
@@ -19,12 +17,11 @@
 #endif
 
 
+constexpr char CONFIG_FILENAME[] = "farsight.json";
+
 int main()
 {
-    std::ifstream cfg_file("farsight.json");
-    const std::string config_str = { std::istreambuf_iterator<char>(cfg_file), std::istreambuf_iterator<char>() };
-
-    const auto config = nlohmann::json::parse(config_str, nullptr, true, true);
+    const auto config = nlohmann::json::parse(std::ifstream(CONFIG_FILENAME), nullptr, true, true);
     const auto it_chains = config.find("chains");
     if(it_chains == config.end())
     {
@@ -48,12 +45,13 @@ int main()
         return EXIT_FAILURE;
     }
 
-    iff_initialize(it_iff.value().dump().c_str());
+    iff_initialize(it_iff->dump().c_str());
 
     std::vector<iff_chain_handle_t> chain_handles;
-    for(const auto& chain_config : it_chains.value())
+    for(const auto& chain_config : *it_chains)
     {
-        const auto chain_handle = iff_create_chain(chain_config.dump().c_str(), [](const char* element_name, int error_code)
+        const auto chain_handle = iff_create_chain(chain_config.dump().c_str(),
+                [](const char* const element_name, const int error_code)
                 {
                     std::ostringstream message;
                     message << "Chain element `" << element_name << "` reported an error: " << error_code;
