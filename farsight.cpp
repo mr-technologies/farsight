@@ -1,9 +1,9 @@
 // std
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <stdlib.h>
 #include <vector>
 
 // json
