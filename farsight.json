@@ -1,5 +1,7 @@
 {
   "IFF": {
+    "set_terminate": true,
+
     "enable_control_interface": true,
 
     "devices": [

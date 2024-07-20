@@ -1,6 +1,7 @@
 // std
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -21,7 +22,16 @@ constexpr char CONFIG_FILENAME[] = "farsight.json";
 
 int main()
 {
-    const auto config = nlohmann::json::parse(std::ifstream(CONFIG_FILENAME), nullptr, true, true);
+    nlohmann::json config;
+    try
+    {
+        config = nlohmann::json::parse(std::ifstream(CONFIG_FILENAME), nullptr, true, true);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << "Invalid configuration provided: " << e.what() << "\n";
+        return EXIT_FAILURE;
+    }
     const auto it_chains = config.find("chains");
     if(it_chains == config.end())
     {
