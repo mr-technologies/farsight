@@ -61,16 +61,17 @@ int main()
     for(const auto& chain_config : *it_chains)
     {
         const auto chain_handle = iff_create_chain(chain_config.dump().c_str(),
-                [](const char* const element_name, const int error_code)
-                {
-                    std::ostringstream message;
-                    message << "Chain element `" << element_name << "` reported an error: " << error_code;
-                    iff_log(IFF_LOG_LEVEL_ERROR, message.str().c_str());
-                });
+                                                   [](const char* element_name, int error_code, void*)
+                                                   {
+                                                       std::ostringstream message;
+                                                       message << "Chain element `" << element_name << "` reported an error: " << error_code;
+                                                       iff_log(IFF_LOG_LEVEL_ERROR, "farsight", message.str().c_str());
+                                                   },
+                                                   nullptr);
         chain_handles.push_back(chain_handle);
     }
 
-    iff_log(IFF_LOG_LEVEL_INFO, "Press Enter to terminate the program");
+    iff_log(IFF_LOG_LEVEL_INFO, "farsight", "Press Enter to terminate the program");
     std::getchar();
 
     for(const auto chain_handle : chain_handles)
