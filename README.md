@@ -1,7 +1,8 @@
 # `farsight`
 
-Most basic and general sample application is called `farsight` and is located in `samples/01_streaming` directory of IFF SDK package.
-It comes with example configuration file (`farsight.json`) demonstrating the following functionality:
+`farsight` is the most basic and general sample application for C API of [MRTech IFF SDK](https://mr-te.ch/iff-sdk).
+It is located in `samples/01_streaming` directory of IFF SDK package.
+Application comes with example configuration file (`farsight.json`) demonstrating the following functionality:
 
 * acquisition from XIMEA camera
 * writing of raw data to DNG files
